@@ -1,0 +1,11 @@
+name: 'nyc_taxi'
+version: '1.0.0'
+profile: 'nyc_taxi_profile'
+
+models:
+  nyc_taxi:
+    +materialized: view
+    staging:
+      +schema: staging
+    marts:
+      +schema: analytics

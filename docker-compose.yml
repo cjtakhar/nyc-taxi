@@ -1,0 +1,128 @@
+version: "3.8"
+
+x-airflow-env: &airflow-env
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__CORE__FERNET_KEY: ""
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
+  _AIRFLOW_WWW_USER_USERNAME: "admin"
+  _AIRFLOW_WWW_USER_PASSWORD: "admin"
+
+  # Extra Python deps to install inside Airflow image
+  _PIP_ADDITIONAL_REQUIREMENTS: >
+    pandas
+    pyarrow
+    psycopg2-binary
+
+  # Warehouse Postgres connection info (for your taxi data)
+  WAREHOUSE_PG_HOST: "warehouse-postgres"
+  WAREHOUSE_PG_DB: "nyc_taxi"
+  WAREHOUSE_PG_USER: "nyc_taxi"
+  WAREHOUSE_PG_PASSWORD: "nyc_taxi"
+
+services:
+  # Airflow metadata database
+  airflow-postgres:
+    image: postgres:13
+    container_name: airflow-postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - airflow_pg_data:/var/lib/postgresql/data
+
+  # Warehouse database for NYC taxi data
+  warehouse-postgres:
+    image: postgres:13
+    container_name: warehouse-postgres
+    environment:
+      POSTGRES_USER: nyc_taxi
+      POSTGRES_PASSWORD: nyc_taxi
+      POSTGRES_DB: nyc_taxi
+    ports:
+      - "5433:5432"
+    volumes:
+      - warehouse_pg_data:/var/lib/postgresql/data
+
+  airflow-init:
+    image: apache/airflow:2.9.0-python3.11
+    container_name: airflow-init
+    depends_on:
+      - airflow-postgres
+      - warehouse-postgres
+    environment:
+      <<: *airflow-env
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+    entrypoint: >
+      bash -c "
+      airflow db init
+      "
+
+      
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+
+  airflow-webserver:
+    image: apache/airflow:2.9.0-python3.11
+    container_name: airflow-webserver
+    depends_on:
+      - airflow-postgres
+      - warehouse-postgres
+      - airflow-init
+    restart: always
+    environment:
+      <<: *airflow-env
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    command: webserver
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+
+  airflow-scheduler:
+    image: apache/airflow:2.9.0-python3.11
+    container_name: airflow-scheduler
+    depends_on:
+      - airflow-postgres
+      - warehouse-postgres
+      - airflow-init
+    restart: always
+    environment:
+      <<: *airflow-env
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    command: scheduler
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+
+volumes:
+  airflow_pg_data:
+  warehouse_pg_data:
+
+
+# docker compose up airflow-init
+# docker compose up -d airflow-webserver airflow-scheduler
+# Access Airflow UI at http://localhost:8080
+# To stop the services: docker compose down
+# To view logs: docker logs -f airflow-webserver
+# To enter the webserver container: docker exec -it airflow-webserver bash
+# To run dbt commands, enter the webserver container and navigate to /opt/airflow/dags/dbt/nyc_taxi
+
+

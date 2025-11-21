@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: RAW
+    tables:
+      - name: RAW_NYC_TAXI_TRIPS
+
+models:
+  - name: stg_taxi_trips
+    description: "Cleaned staging model for NYC taxi trips."
+    tests:
+      - not_null:
+          column_name: pickup_ts
+      - not_null:
+          column_name: dropoff_ts
+
+  - name: fact_taxi_trips
+    description: "Fact table of taxi trips with core metrics."
+    tests:
+      - not_null:
+          column_name: trip_date
