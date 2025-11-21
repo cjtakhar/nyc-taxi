@@ -1,126 +1,120 @@
-🚖 NYC Taxi Data Pipeline — Modern Data Stack (Airflow + Postgres + dbt)
+# 🚖 NYC Taxi Data Pipeline
 
-This project implements a full modern data engineering pipeline using:
+### *A Modern Data Engineering Project (Airflow • Postgres • dbt • Docker)*
 
-Apache Airflow – workflow orchestration
+This project implements a **full modern data engineering pipeline** using:
 
-Postgres – data warehouse
+* **Apache Airflow** for workflow orchestration
+* **Postgres** as a local data warehouse
+* **dbt** for transformations and analytics modeling
+* **Docker Compose** for a fully reproducible environment
+* **Python** for bulk ingestion (Parquet → Postgres)
 
-dbt – transformations & analytics layer
+It ingests **real NYC Yellow Taxi data**, loads it into a warehouse, transforms it with dbt, and prepares it for analytics and dashboards — all locally and fully containerized.
 
-Docker Compose – reproducible local environment
+---
 
-Python – bulk ingestion (Parquet → Postgres)
+## 🏗️ Architecture
 
-It ingests real NYC Yellow Taxi data (2023), loads it into a warehouse, transforms it using dbt, and prepares the data for analytics and dashboards.
+```
+          ┌───────────────┐
+          │   Parquet      │
+          │  NYC Taxi Data │
+          └───────┬───────┘
+                  │
+                  ▼
+      ┌──────────────────────┐
+      │      Airflow DAG     │
+      │  bulk_load task      │
+      └─────────┬────────────┘
+                │
+                ▼
+      ┌──────────────────────┐
+      │ Postgres Warehouse   │
+      │ raw_nyc_taxi_trips   │
+      └─────────┬────────────┘
+                │
+                ▼
+      ┌──────────────────────┐
+      │         dbt          │
+      │  staging / marts     │
+      └──────────────────────┘
+```
 
-Architecture
+---
 
-          ┌─────────────┐
-          │  Parquet     │
-          │ NYC Taxi     │
-          └──────┬──────┘
-                 │
-                 ▼
-        ┌──────────────────┐
-        │   Airflow DAG    │
-        │ bulk_load task   │
-        └──────┬───────────┘
-               │
-               ▼
-     ┌──────────────────┐
-     │  Warehouse (PG)  │
-     │ raw_nyc_taxi...  │
-     └──────┬───────────┘
-            │
-            ▼
-      ┌────────────────┐
-      │    dbt         │
-      │ staging/marts  │
-      └────────────────┘
+## 🧩 Components
 
+### **1. Apache Airflow**
 
-🧩 Components
-1. Airflow
+* Runs inside Docker
+* Hosts the DAG: `nyc_taxi_bulk_load_pipeline`
+* Orchestrates ingestion + transformation
 
-Runs inside Docker
+### **2. Postgres Warehouse**
 
-Hosts the DAG: nyc_taxi_bulk_load_pipeline
+Two Postgres instances:
 
-Responsible for orchestrating data ingestion
+* `airflow-postgres` → Airflow metadata
+* `warehouse-postgres` → `nyc_taxi` warehouse DB
 
-2. Postgres Warehouse
+### **3. dbt**
 
-Two Postgres services are defined:
+* Cleans, models, and tests data
+* Staging model: `stg_taxi_trips.sql`
+* Schema tests in `schema.yml`
 
-airflow-postgres → Airflow metadata
+---
 
-warehouse-postgres → NYC taxi warehouse (nyc_taxi database)
+## 🚀 Features
 
-3. dbt
+### ✨ **High-performance raw ingestion (Parquet → Postgres)**
 
-Performs transformations (stg_taxi_trips model)
+`airflow/scripts/bulk_load_nyc_taxi.py`:
 
-Creates a clean schema ready for analytics
+* Reads Parquet
+* Normalizes columns
+* Creates raw table
+* Bulk-loads using Postgres `COPY`
 
-🚀 Features
-✨ Raw data ingestion (Parquet → Postgres)
+### ✨ **Orchestrated with Airflow**
 
-Using a Python script:
+`airflow/dags/nyc_taxi_pipeline_dag.py`:
 
-airflow/scripts/bulk_load_nyc_taxi.py
+* Automates ingestion
+* Runs as a single DAG task
 
-The script:
+### ✨ **dbt transformations**
 
-Reads a Parquet file
+Under `/dbt`:
 
-Subsets and orders columns
+* Staging layer
+* Data tests
+* Marts (optional)
 
-Creates a raw table
+---
 
-Performs a high-performance COPY into Postgres
+## 🛠️ Getting Started
 
-✨ Orchestration with Airflow
+### **Prerequisites**
 
-DAG located in:
+* Docker Desktop
+* (Optional) Python 3.10+
 
-airflow/dags/nyc_taxi_pipeline_dag.py
+---
 
+## 🔧 Setup
 
-Runs the ingestion task:
+Clone and enter the project:
 
-bulk_load_parquet_to_postgres
-
-✨ dbt models
-
-Located under:
-
-dbt/
-
-
-stg_taxi_trips.sql
-
-schema.yml
-
-dbt_project.yml
-
-🛠️ Getting Started
-Prerequisites
-
-Docker Desktop installed
-
-Python (optional, only needed if editing scripts locally)
-
-🔧 Setup Instructions
-
-Clone the repo and go to the root:
-
-git clone <repo>
+```bash
+git clone <your-repo-url>
 cd nyc-taxi
+```
 
+Ensure this structure exists:
 
-Ensure your folder structure looks like:
-
+```
 nyc-taxi/
   airflow/
     dags/
@@ -129,88 +123,96 @@ nyc-taxi/
     yellow_tripdata_2023-01.parquet
   dbt/
   docker-compose.yml
+```
 
-▶️ Start the Pipeline
-1. Initialize Airflow
+---
+
+## ▶️ Run the Pipeline
+
+### **1. Initialize Airflow**
+
+```bash
 docker compose up airflow-init
+```
 
-2. Start Airflow Webserver + Scheduler
+### **2. Start Airflow Webserver + Scheduler**
+
+```bash
 docker compose up -d airflow-webserver airflow-scheduler
+```
 
+### Open the UI
 
-Open the UI:
+👉 [http://localhost:8080](http://localhost:8080)
+Login (if manually created):
 
-👉 http://localhost:8080
-
-Default login (if you created user manually):
-
+```
 admin / admin
+```
 
-🧪 Run the Pipeline
+---
+
+## 🧪 Run the DAG
 
 In the Airflow UI:
 
-Turn on nyc_taxi_bulk_load_pipeline
+1. Enable `nyc_taxi_bulk_load_pipeline`
+2. Click **Trigger DAG**
+3. Watch task logs & Graph view
 
-Click Trigger DAG
+---
 
-Monitor the task in the Graph or Grid view.
+## 📊 Validate Load in Postgres
 
-📊 Validate the Load
+Connect:
 
-Connect to warehouse Postgres:
-
+```bash
 psql -h localhost -p 5433 -U nyc_taxi -d nyc_taxi
+# password: nyc_taxi
+```
 
+Query:
 
-Password: nyc_taxi
-
-Check the table:
-
+```sql
 SELECT COUNT(*) FROM raw_nyc_taxi_trips;
+```
 
+If rows appear → 🎉 ingestion succeeded.
 
-If rows appear → the ingestion succeeded!
+---
 
-🧱 dbt Transformations
+## 🧱 Run dbt Models
 
-Inside the Airflow webserver container:
-
+```bash
 docker exec -it airflow-webserver bash
 cd /opt/airflow/dags/dbt/nyc_taxi
 dbt run
 dbt test
+```
 
+---
 
-This builds:
+## 🎯 Roadmap
 
-staging models
+* Load multiple months
+* Add fact tables / marts
+* Build dashboards (Looker Studio / Metabase)
+* Add alerts (Slack / Email)
+* Add S3 ingestion
+* Deploy on MWAA / Astronomer
 
-marts (if added)
+---
 
-schema tests
-
-🎯 Roadmap (optional next steps)
-
-Load multiple months of data
-
-Add a mart model (fact table)
-
-Build dashboards in Looker Studio or Metabase
-
-Add alerts (Slack/Email)
-
-Add S3/GCS ingestion
-
-Deploy on Airflow Cloud or MWAA
-
-📌 Summary
+## 📌 Summary
 
 This project demonstrates:
 
 ✔ Data ingestion engineering
-✔ Workflow orchestration (Airflow)
-✔ Data modeling (dbt)
-✔ Warehouse design (Postgres RAW layer)
-✔ End-to-end MDS pipeline building
-✔ Docker-based reproducible environments
+✔ Workflow orchestration with Airflow
+✔ RAW → staging → marts modeling in dbt
+✔ Postgres as a local warehouse
+✔ Modern Data Stack principles
+✔ Fully containerized reproducible environment
+
+---
+
