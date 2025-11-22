@@ -46,6 +46,21 @@ def bulk_load_parquet_to_postgres():
     # Subset and reorder columns (in case parquet has extras)
     df = df[columns]
 
+    # ---- NEW: clean up integer-like columns so they aren't written as "1.0" ----
+    int_like_cols = [
+        "VendorID",
+        "passenger_count",
+        "RatecodeID",
+        "PULocationID",
+        "DOLocationID",
+        "payment_type",
+    ]
+
+    for col in int_like_cols:
+        if col in df.columns:
+            # round just in case, then convert to pandas nullable Int64
+            df[col] = df[col].round().astype("Int64")
+
     # -------------------------
     # 2) Connect to warehouse Postgres
     # -------------------------
@@ -96,7 +111,8 @@ def bulk_load_parquet_to_postgres():
     # -------------------------
     # Convert DataFrame to CSV in memory (no header)
     buffer = StringIO()
-    df.to_csv(buffer, index=False, header=False)
+    # na_rep='' ensures NULLs are empty strings in CSV
+    df.to_csv(buffer, index=False, header=False, na_rep="")
     buffer.seek(0)
 
     copy_sql = """
@@ -121,7 +137,7 @@ def bulk_load_parquet_to_postgres():
         congestion_surcharge,
         airport_fee
     )
-    FROM STDIN WITH (FORMAT CSV);
+    FROM STDIN WITH (FORMAT CSV, NULL '');
     """
 
     cur.copy_expert(copy_sql, buffer)
