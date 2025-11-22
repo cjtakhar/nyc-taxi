@@ -18,8 +18,8 @@ It ingests **real NYC Yellow Taxi data**, loads it into a warehouse, transforms 
 
 ```
           ┌───────────────┐
-          │   Parquet      │
-          │  NYC Taxi Data │
+          │   Parquet     │
+          │ NYC Taxi Data │ 
           └───────┬───────┘
                   │
                   ▼
