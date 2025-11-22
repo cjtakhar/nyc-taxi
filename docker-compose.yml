@@ -112,9 +112,24 @@ services:
       - ./airflow/scripts:/opt/airflow/scripts
       - ./data:/opt/airflow/data
 
+  api:
+    build: ./api
+    depends_on:
+      - warehouse-postgres
+    environment:
+      DB_HOST: warehouse-postgres
+      DB_PORT: 5432
+      DB_NAME: nyc_taxi
+      DB_USER: nyc_taxi
+      DB_PASS: nyc_taxi
+    ports:
+      - "8000:8000"
+
 volumes:
   airflow_pg_data:
   warehouse_pg_data:
+
+
 
 
 # docker compose up airflow-init
