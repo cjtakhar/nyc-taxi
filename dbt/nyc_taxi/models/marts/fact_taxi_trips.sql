@@ -10,5 +10,8 @@ select
     payment_type,
     fare_amount,
     tip_amount,
-    total_amount
+    total_amount,
+    congestion_surcharge,
+    airport_fee,
+    cbd_congestion_fee
 from {{ ref('stg_taxi_trips') }}

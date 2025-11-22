@@ -1,18 +1,28 @@
+-- models/staging/stg_taxi_trips.sql
+
 with source as (
 
     select
-        VENDORID,
-        TPEP_PICKUP_DATETIME,
-        TPEP_DROPOFF_DATETIME,
-        PASSENGER_COUNT,
-        TRIP_DISTANCE,
-        RATECODEID,
-        PULOCATIONID,
-        DOLOCATIONID,
-        PAYMENT_TYPE,
-        FARE_AMOUNT,
-        TIP_AMOUNT,
-        TOTAL_AMOUNT
+        VendorID,
+        tpep_pickup_datetime,
+        tpep_dropoff_datetime,
+        passenger_count,
+        trip_distance,
+        RatecodeID,
+        store_and_fwd_flag,
+        PULocationID,
+        DOLocationID,
+        payment_type,
+        fare_amount,
+        extra,
+        mta_tax,
+        tip_amount,
+        tolls_amount,
+        improvement_surcharge,
+        total_amount,
+        congestion_surcharge,
+        Airport_fee,
+        cbd_congestion_fee
     from {{ source('raw', 'raw_nyc_taxi_trips') }}
 
 ),
@@ -20,20 +30,23 @@ with source as (
 renamed as (
 
     select
-        vendorid as vendor_id,
+        VendorID as vendor_id,
         tpep_pickup_datetime as pickup_ts,
         tpep_dropoff_datetime as dropoff_ts,
         passenger_count,
         trip_distance,
-        ratecodeid as rate_code_id,
-        pulocationid as pickup_location_id,
-        dolocationid as dropoff_location_id,
+        RatecodeID as rate_code_id,
+        PULocationID as pickup_location_id,
+        DOLocationID as dropoff_location_id,
         payment_type,
         fare_amount,
         tip_amount,
-        total_amount
+        total_amount,
+        congestion_surcharge,
+        Airport_fee as airport_fee,
+        cbd_congestion_fee
     from source
 
 )
 
-select * from renamed
+select * from renamed;

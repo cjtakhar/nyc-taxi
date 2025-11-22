@@ -108,7 +108,7 @@ Under `/dbt`:
 Clone and enter the project:
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/cjtakhar/nyc-taxi
 cd nyc-taxi
 ```
 
