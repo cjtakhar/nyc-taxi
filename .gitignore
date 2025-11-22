@@ -36,4 +36,10 @@ lerna-debug.log*
 .next/
 .nuxt/
 out/
-build/              
+build/     
+# Parquet + raw data
+*.parquet
+*/data/*.parquet
+data/
+raw_data/
+datasets/         
